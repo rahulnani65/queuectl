@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// WorkerManager coordinates a pool of workers that pull jobs from the
+// database and execute them, handling retries and shutdown.
 type WorkerManager struct {
 	db            *DB
 	activeWorkers int
@@ -14,6 +16,7 @@ type WorkerManager struct {
 	wg            sync.WaitGroup
 }
 
+// NewWorkerManager returns a WorkerManager bound to the provided DB.
 func NewWorkerManager(db *DB) *WorkerManager {
 	return &WorkerManager{
 		db:       db,
@@ -21,6 +24,7 @@ func NewWorkerManager(db *DB) *WorkerManager {
 	}
 }
 
+// StartWorkers launches count worker goroutines and tracks them until StopWorkers is called.
 func (wm *WorkerManager) StartWorkers(count int) {
 	wm.activeWorkers = count
 	for i := 0; i < count; i++ {
@@ -55,6 +59,8 @@ func (wm *WorkerManager) workerLoop(id int) {
 	}
 }
 
+// processJob runs a single job respecting the configured timeout and
+// persists its outcome. On failure, it may schedule a retry.
 func (wm *WorkerManager) processJob(job *Job, workerID int) {
 	log.Printf("Worker %d processing: %s\n", workerID, job.Command)
 
@@ -79,6 +85,8 @@ func (wm *WorkerManager) processJob(job *Job, workerID int) {
 	wm.db.SaveJob(job)
 }
 
+// handleFailure updates the job attempt count and either moves the job
+// to the DLQ (DEAD) or schedules a retry with exponential backoff.
 func (wm *WorkerManager) handleFailure(job *Job, result ExecutionResult) {
 	job.Attempts++
 	job.ErrorMessage = result.Error
@@ -109,6 +117,7 @@ func (wm *WorkerManager) handleFailure(job *Job, result ExecutionResult) {
 	}
 }
 
+// StopWorkers signals all active workers to stop and waits for them to exit.
 func (wm *WorkerManager) StopWorkers() {
 	log.Println("Stopping workers...")
 	for i := 0; i < wm.activeWorkers; i++ {
@@ -118,6 +127,7 @@ func (wm *WorkerManager) StopWorkers() {
 	log.Println("✓ All workers stopped")
 }
 
+// GetActiveWorkerCount returns the number of worker goroutines currently running.
 func (wm *WorkerManager) GetActiveWorkerCount() int {
 	return wm.activeWorkers
 }

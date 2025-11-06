@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	// "log"
-	// "os"
 	"queuectl/pkg"
 
 	"github.com/spf13/cobra"
@@ -14,12 +12,14 @@ var (
 	wm *pkg.WorkerManager
 )
 
+// rootCmd is the base command for the queuectl CLI.
 var rootCmd = &cobra.Command{
 	Use:   "queuectl",
 	Short: "Background job queue system",
 	Long:  "A production-grade job queue with retries and dead letter queue",
 }
 
+// Execute initializes dependencies and runs the CLI command tree.
 func Execute() error {
 	var err error
 
@@ -37,5 +37,5 @@ func Execute() error {
 }
 
 func init() {
-	// Subcommands will be added here on Day 2
+    // Subcommands are registered in their respective files' init functions.
 }

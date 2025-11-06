@@ -7,10 +7,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// DB provides a thin wrapper around the SQLite connection and
+// exposes typed helpers for working with jobs and configuration.
 type DB struct {
 	conn *sql.DB
 }
 
+// NewDB opens (or creates) a SQLite database at the given path and
+// ensures the required schema and default configuration are present.
 func NewDB(path string) (*DB, error) {
 	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -70,6 +74,7 @@ func initSchema(conn *sql.DB) error {
 	return nil
 }
 
+// SaveJob inserts or updates a job record.
 func (db *DB) SaveJob(job *Job) error {
 	_, err := db.conn.Exec(`
 		INSERT OR REPLACE INTO jobs 
@@ -86,11 +91,10 @@ func (db *DB) SaveJob(job *Job) error {
 	return err
 }
 
+// FindJobsByState returns up to 100 jobs that match the provided state.
 func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, command, state, attempts, max_retries, 
-		        created_at, updated_at, scheduled_at, 
-		        error_message, exit_code, output 
+		`SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output 
 		 FROM jobs WHERE state = ? LIMIT 100`, 
 		state,
 	)
@@ -117,6 +121,52 @@ func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	return jobs, nil
 }
 
+// FindJobByID returns a job by its ID, or nil if not found.
+func (db *DB) FindJobByID(id string) (*Job, error) {
+	job := &Job{}
+	err := db.conn.QueryRow(
+		`SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output FROM jobs WHERE id = ?`, id).
+		Scan(&job.ID, &job.Command, &job.State, &job.Attempts, &job.MaxRetries,
+			&job.CreatedAt, &job.UpdatedAt, &job.ScheduledAt, &job.ErrorMessage,
+			&job.ExitCode, &job.Output)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return job, err
+}
+
+// GetStatusSummary aggregates job counts by state, returning a map with
+// all states initialized to zero so that lookups are safe.
+func (db *DB) GetStatusSummary() (map[JobState]int, error) {
+	summary := make(map[JobState]int)
+
+	// Initialize all states with 0 to avoid missing keys
+	summary[StatePending] = 0
+	summary[StateProcessing] = 0
+	summary[StateCompleted] = 0
+	summary[StateFailed] = 0
+	summary[StateDead] = 0
+
+	rows, err := db.conn.Query("SELECT state, COUNT(*) as count FROM jobs GROUP BY state")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var state JobState
+		var count int
+		err := rows.Scan(&state, &count)
+		if err != nil {
+			continue
+		}
+		summary[state] = count
+	}
+	return summary, nil
+}
+
+// AcquireNextPendingJob atomically selects the oldest runnable PENDING job
+// (respecting scheduled_at) and transitions it to PROCESSING.
 func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	tx, err := db.conn.Begin()
 	if err != nil {
@@ -126,10 +176,8 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 
 	job := &Job{}
 	err = tx.QueryRow(`
-		SELECT id, command, state, attempts, max_retries, 
-		       created_at, updated_at, scheduled_at, 
-		       error_message, exit_code, output
-		FROM jobs 
+		SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output
+		FROM jobs
 		WHERE state = ? AND (scheduled_at IS NULL OR scheduled_at <= datetime('now'))
 		ORDER BY created_at
 		LIMIT 1
@@ -153,29 +201,33 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 
 	err = tx.Commit()
 	if err != nil {
-    return nil, err
-}
+		return nil, err
+	}
+
 	job.State = StateProcessing
 	return job, nil
 }
 
+// GetConfig returns the string value for a configuration key.
 func (db *DB) GetConfig(key string) (string, error) {
 	var value string
 	err := db.conn.QueryRow(
-		"SELECT value FROM config WHERE key = ?", 
+		"SELECT value FROM config WHERE key = ?",
 		key,
 	).Scan(&value)
 	return value, err
 }
 
+// SetConfig upserts the string value for a configuration key.
 func (db *DB) SetConfig(key, value string) error {
 	_, err := db.conn.Exec(
-		"INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", 
+		"INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
 		key, value,
 	)
 	return err
 }
 
+// Close terminates the underlying database connection.
 func (db *DB) Close() error {
 	return db.conn.Close()
 }

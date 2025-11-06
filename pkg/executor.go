@@ -3,11 +3,13 @@ package pkg
 import (
 	"bytes"
 	"context"
-	// "log"
 	"os/exec"
 	"time"
 )
 
+// ExecutionResult captures the outcome of running a shell command,
+// including whether it succeeded, its exit code, any error message,
+// and combined stdout/stderr output.
 type ExecutionResult struct {
 	Success  bool
 	ExitCode int
@@ -15,6 +17,9 @@ type ExecutionResult struct {
 	Output   string
 }
 
+// ExecuteCommand runs the provided shell command with a timeout (in seconds).
+// It returns combined stdout/stderr and captures the exit code. On timeout,
+// Success is false and ExitCode is -1.
 func ExecuteCommand(command string, timeout int64) ExecutionResult {
 	ctx, cancel := context.WithTimeout(
 		context.Background(), 
