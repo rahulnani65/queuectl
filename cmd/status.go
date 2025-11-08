@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// statusCmd shows queue status
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show queue status",
@@ -16,7 +15,6 @@ var statusCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to get status: %w", err)
 		}
-
 		fmt.Println("\n════════════════════════════════════")
 		fmt.Println("         Queue Status Report        ")
 		fmt.Println("════════════════════════════════════")
@@ -28,7 +26,6 @@ var statusCmd = &cobra.Command{
 		fmt.Println("────────────────────────────────────")
 		fmt.Printf("  Active Workers: %d\n", wm.GetActiveWorkerCount())
 		fmt.Println("════════════════════════════════════\n")
-
 		return nil
 	},
 }

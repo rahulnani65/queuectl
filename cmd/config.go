@@ -7,14 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// configCmd manages configuration
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage configuration",
 	Long:  "Get or set configuration values such as max-retries, backoff-base, job-timeout",
 }
 
-// configGetCmd gets a config value
 var configGetCmd = &cobra.Command{
 	Use:   "get [key]",
 	Short: "Get configuration value",
@@ -33,7 +31,6 @@ var configGetCmd = &cobra.Command{
 	},
 }
 
-// configSetCmd updates a configuration value.
 var configSetCmd = &cobra.Command{
 	Use:   "set [key] [value]",
 	Short: "Set configuration value",
@@ -42,7 +39,6 @@ var configSetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key := args[0]
 		value := args[1]
-
 		validKeys := map[string]bool{
 			"max-retries":  true,
 			"backoff-base": true,
@@ -57,7 +53,6 @@ var configSetCmd = &cobra.Command{
 		if err := db.SetConfig(key, value); err != nil {
 			return fmt.Errorf("failed to set config: %w", err)
 		}
-
 		fmt.Printf("✓ Config updated: %s = %s\n", key, value)
 		return nil
 	},

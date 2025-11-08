@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// ExecutionResult holds the result of command execution
 type ExecutionResult struct {
 	Success  bool
 	ExitCode int
@@ -15,7 +14,6 @@ type ExecutionResult struct {
 	Output   string
 }
 
-// ExecuteCommand runs a shell command with timeout
 func ExecuteCommand(command string, timeout int64) ExecutionResult {
 	ctx, cancel := context.WithTimeout(
 		context.Background(), 
@@ -24,13 +22,10 @@ func ExecuteCommand(command string, timeout int64) ExecutionResult {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-
 	var output bytes.Buffer
 	cmd.Stdout = &output
 	cmd.Stderr = &output
-
 	err := cmd.Run()
-
 	if ctx.Err() == context.DeadlineExceeded {
 		cmd.Process.Kill()
 		return ExecutionResult{
@@ -40,7 +35,6 @@ func ExecuteCommand(command string, timeout int64) ExecutionResult {
 			Output:   output.String(),
 		}
 	}
-
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -54,7 +48,6 @@ func ExecuteCommand(command string, timeout int64) ExecutionResult {
 			}
 		}
 	}
-
 	return ExecutionResult{
 		Success:  exitCode == 0,
 		ExitCode: exitCode,

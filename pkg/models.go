@@ -2,7 +2,6 @@ package pkg
 
 import "time"
 
-// JobState represents job state
 type JobState string
 
 const (
@@ -13,7 +12,6 @@ const (
 	StateDead       JobState = "DEAD"
 )
 
-// Job represents a queued job
 type Job struct {
 	ID           string
 	Command      string
@@ -28,7 +26,6 @@ type Job struct {
 	Output       string
 }
 
-// CalculateBackoff calculates exponential backoff delay
 func (j *Job) CalculateBackoff(base int) int64 {
 	result := 1
 	for i := 0; i < j.Attempts; i++ {

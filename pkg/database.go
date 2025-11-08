@@ -7,12 +7,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// DB wraps SQLite connection
 type DB struct {
 	conn *sql.DB
 }
 
-// NewDB creates a new database connection and initializes schema
 func NewDB(path string) (*DB, error) {
 	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -22,11 +20,12 @@ func NewDB(path string) (*DB, error) {
 	if err := conn.Ping(); err != nil {
 		return nil, err
 	}
-
 	if err := initSchema(conn); err != nil {
 		return nil, err
 	}
-
+	if err := recoverStuckJobs(conn); err != nil {
+		return nil, err
+	}
 	log.Println("✓ Database initialized")
 	return &DB{conn: conn}, nil
 }
@@ -60,7 +59,6 @@ func initSchema(conn *sql.DB) error {
 	if err != nil {
 		return err
 	}
-
 	_, _ = conn.Exec(`
 		INSERT OR IGNORE INTO config (key, value) 
 		VALUES 
@@ -72,7 +70,22 @@ func initSchema(conn *sql.DB) error {
 	return nil
 }
 
-// SaveJob saves a job to the database (insert or update)
+// Recover jobs stuck in PROCESSING state after crash
+func recoverStuckJobs(conn *sql.DB) error {
+	result, err := conn.Exec(
+		"UPDATE jobs SET state = ? WHERE state = ?",
+		StatePending, StateProcessing,
+	)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err == nil && rowsAffected > 0 {
+		log.Printf("✓ Recovered %d stuck job(s) from PROCESSING state\n", rowsAffected)
+	}
+	return nil
+}
+
 func (db *DB) SaveJob(job *Job) error {
 	_, err := db.conn.Exec(`
 		INSERT OR REPLACE INTO jobs 
@@ -88,8 +101,6 @@ func (db *DB) SaveJob(job *Job) error {
 	)
 	return err
 }
-
-// FindJobsByState finds jobs by state (limited to 100)
 func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	rows, err := db.conn.Query(
 		`SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output 
@@ -100,7 +111,6 @@ func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
 	jobs := []Job{}
 	for rows.Next() {
 		job := Job{}
@@ -119,7 +129,6 @@ func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	return jobs, nil
 }
 
-// FindJobByID finds a job by ID
 func (db *DB) FindJobByID(id string) (*Job, error) {
 	job := &Job{}
 	err := db.conn.QueryRow(
@@ -133,11 +142,8 @@ func (db *DB) FindJobByID(id string) (*Job, error) {
 	return job, err
 }
 
-// GetStatusSummary returns count of jobs by state
 func (db *DB) GetStatusSummary() (map[JobState]int, error) {
 	summary := make(map[JobState]int)
-
-	// Initialize all states to 0
 	summary[StatePending] = 0
 	summary[StateProcessing] = 0
 	summary[StateCompleted] = 0
@@ -170,7 +176,6 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	}
 	defer tx.Rollback()
 
-	// Get the oldest pending job that's ready to run
 	job := &Job{}
 	err = tx.QueryRow(`
 		SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output
@@ -190,8 +195,6 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Mark job as processing
 	_, err = tx.Exec("UPDATE jobs SET state = ? WHERE id = ?", StateProcessing, job.ID)
 	if err != nil {
 		return nil, err
@@ -205,7 +208,6 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	return job, nil
 }
 
-// GetConfig gets a config value
 func (db *DB) GetConfig(key string) (string, error) {
 	var value string
 	err := db.conn.QueryRow(
@@ -215,7 +217,6 @@ func (db *DB) GetConfig(key string) (string, error) {
 	return value, err
 }
 
-// SetConfig sets a config value
 func (db *DB) SetConfig(key, value string) error {
 	_, err := db.conn.Exec(
 		"INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
@@ -224,7 +225,6 @@ func (db *DB) SetConfig(key, value string) error {
 	return err
 }
 
-// Close closes the database connection
 func (db *DB) Close() error {
 	return db.conn.Close()
 }

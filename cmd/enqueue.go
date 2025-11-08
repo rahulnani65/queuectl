@@ -10,31 +10,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// enqueueCmd handles job enqueueing
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue [command]",
 	Short: "Enqueue a new job",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		command := args[0]
-
 		var jobReq struct {
 			ID         string `json:"id"`
 			Command    string `json:"command"`
 			MaxRetries int    `json:"max_retries"`
 		}
 
-		// Try to parse as JSON, if fails treat as plain command
 		err := json.Unmarshal([]byte(command), &jobReq)
 		if err != nil {
 			jobReq.Command = command
-			jobReq.MaxRetries = 3 // default
+			jobReq.MaxRetries = 3
 		}
 
 		if jobReq.ID == "" {
 			jobReq.ID = uuid.New().String()
 		}
-
 		job := &pkg.Job{
 			ID:         jobReq.ID,
 			Command:    jobReq.Command,
@@ -48,7 +44,6 @@ var enqueueCmd = &cobra.Command{
 		if err := db.SaveJob(job); err != nil {
 			return fmt.Errorf("failed to enqueue job: %w", err)
 		}
-
 		fmt.Println("✓ Job enqueued successfully")
 		return nil
 	},

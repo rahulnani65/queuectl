@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listCmd lists jobs by state
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List jobs by state",
@@ -19,7 +18,6 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to list jobs: %w", err)
 		}
-
 		fmt.Println("\n" + strings.Repeat("═", 110))
 		fmt.Printf("%-36s | %-40s | %-12s | %-8s\n", "ID", "Command", "State", "Attempts")
 		fmt.Println(strings.Repeat("─", 110))
@@ -33,7 +31,6 @@ var listCmd = &cobra.Command{
 		}
 		fmt.Println(strings.Repeat("═", 110))
 		fmt.Printf("Total: %d jobs\n\n", len(jobs))
-
 		return nil
 	},
 }

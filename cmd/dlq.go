@@ -9,14 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// dlqCmd handles DLQ operations
 var dlqCmd = &cobra.Command{
 	Use:   "dlq",
 	Short: "Manage Dead Letter Queue",
 	Long:  "List and retry permanently failed jobs",
 }
 
-// dlqListCmd lists dead jobs
 var dlqListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List dead jobs",
@@ -25,7 +23,6 @@ var dlqListCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to list DLQ: %w", err)
 		}
-
 		fmt.Println("\n" + strings.Repeat("═", 120))
 		fmt.Println("Dead Letter Queue - Failed Jobs")
 		fmt.Println(strings.Repeat("═", 120))
@@ -37,7 +34,6 @@ var dlqListCmd = &cobra.Command{
 			if len(cmdDisplay) > 35 {
 				cmdDisplay = cmdDisplay[:32] + "..."
 			}
-
 			errDisplay := job.ErrorMessage
 			if len(errDisplay) > 10 {
 				errDisplay = errDisplay[:7] + "..."
@@ -48,12 +44,10 @@ var dlqListCmd = &cobra.Command{
 
 		fmt.Println(strings.Repeat("═", 120))
 		fmt.Printf("Total dead jobs: %d\n\n", len(jobs))
-
 		return nil
 	},
 }
 
-// dlqRetryCmd retries a dead job
 var dlqRetryCmd = &cobra.Command{
 	Use:   "retry [job-id]",
 	Short: "Retry a dead job",
@@ -72,7 +66,6 @@ var dlqRetryCmd = &cobra.Command{
 		if job.State != pkg.StateDead {
 			return fmt.Errorf("job is not in DLQ. Current state: %s", job.State)
 		}
-
 		job.State = pkg.StatePending
 		job.Attempts = 0
 		job.ErrorMessage = ""
@@ -84,7 +77,6 @@ var dlqRetryCmd = &cobra.Command{
 		if err := db.SaveJob(job); err != nil {
 			return fmt.Errorf("failed to requeue job: %w", err)
 		}
-
 		fmt.Printf("✓ Job requeued: %s\n", jobID)
 		return nil
 	},

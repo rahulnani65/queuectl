@@ -9,13 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// workerCmd manages workers
 var workerCmd = &cobra.Command{
 	Use:   "worker",
 	Short: "Manage worker processes",
 }
 
-// workerStartCmd starts worker processes
 var workerStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start worker processes",
@@ -29,11 +27,9 @@ var workerStartCmd = &cobra.Command{
 		wm.StartWorkers(count)
 		fmt.Printf("✓ Started %d worker(s)\n", count)
 		fmt.Println("Press Ctrl+C to stop workers...")
-
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
-
 		fmt.Println("\n✓ Shutting down workers gracefully...")
 		wm.StopWorkers()
 		return nil
