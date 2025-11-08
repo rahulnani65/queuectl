@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// workerCmd groups worker-related subcommands.
+// workerCmd manages workers
 var workerCmd = &cobra.Command{
 	Use:   "worker",
 	Short: "Manage worker processes",
 }
 
-// workerStartCmd starts N worker goroutines until interrupted.
+// workerStartCmd starts worker processes
 var workerStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start worker processes",

@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// dlqCmd groups Dead Letter Queue operations.
+// dlqCmd handles DLQ operations
 var dlqCmd = &cobra.Command{
 	Use:   "dlq",
 	Short: "Manage Dead Letter Queue",
 	Long:  "List and retry permanently failed jobs",
 }
 
-// dlqListCmd lists jobs that are currently in the DLQ.
+// dlqListCmd lists dead jobs
 var dlqListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List dead jobs",
@@ -53,7 +53,7 @@ var dlqListCmd = &cobra.Command{
 	},
 }
 
-// dlqRetryCmd resets a DLQ job and re-enqueues it for processing.
+// dlqRetryCmd retries a dead job
 var dlqRetryCmd = &cobra.Command{
 	Use:   "retry [job-id]",
 	Short: "Retry a dead job",

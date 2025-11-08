@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// enqueueCmd enqueues a new job from a raw command or a JSON payload.
+// enqueueCmd handles job enqueueing
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue [command]",
 	Short: "Enqueue a new job",
@@ -24,10 +24,11 @@ var enqueueCmd = &cobra.Command{
 			MaxRetries int    `json:"max_retries"`
 		}
 
+		// Try to parse as JSON, if fails treat as plain command
 		err := json.Unmarshal([]byte(command), &jobReq)
 		if err != nil {
 			jobReq.Command = command
-			jobReq.MaxRetries = 3
+			jobReq.MaxRetries = 3 // default
 		}
 
 		if jobReq.ID == "" {

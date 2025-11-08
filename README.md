@@ -284,16 +284,15 @@ The test script validates:
 
 ## 🔮 Future Enhancements
 
-Potential improvements for future versions:
+Some ideas for future improvements:
 
 - Job priority queues
 - Web dashboard for monitoring
 - Job scheduling (cron-like syntax)
 - Job dependencies
-- Metrics and statistics export
+- Metrics export
 - Distributed worker support
 - Job output streaming
-- Email/notification on job failure
 
 
 ## 🙏 Contributing

@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-// WorkerManager coordinates a pool of workers that pull jobs from the
-// database and execute them, handling retries and shutdown.
+// WorkerManager handles worker pool for processing jobs
 type WorkerManager struct {
 	db            *DB
 	activeWorkers int
@@ -16,7 +15,7 @@ type WorkerManager struct {
 	wg            sync.WaitGroup
 }
 
-// NewWorkerManager returns a WorkerManager bound to the provided DB.
+// NewWorkerManager creates a new worker manager
 func NewWorkerManager(db *DB) *WorkerManager {
 	return &WorkerManager{
 		db:       db,
@@ -24,7 +23,7 @@ func NewWorkerManager(db *DB) *WorkerManager {
 	}
 }
 
-// StartWorkers launches count worker goroutines and tracks them until StopWorkers is called.
+// StartWorkers starts N worker goroutines
 func (wm *WorkerManager) StartWorkers(count int) {
 	wm.activeWorkers = count
 	for i := 0; i < count; i++ {
@@ -59,11 +58,11 @@ func (wm *WorkerManager) workerLoop(id int) {
 	}
 }
 
-// processJob runs a single job respecting the configured timeout and
-// persists its outcome. On failure, it may schedule a retry.
+// processJob executes a job and handles retries on failure
 func (wm *WorkerManager) processJob(job *Job, workerID int) {
 	log.Printf("Worker %d processing: %s\n", workerID, job.Command)
 
+	// Get timeout config, default to 300 seconds
 	timeoutStr, _ := wm.db.GetConfig("job-timeout")
 	timeout := int64(300)
 	if val, err := strconv.ParseInt(timeoutStr, 10, 64); err == nil {
@@ -85,13 +84,13 @@ func (wm *WorkerManager) processJob(job *Job, workerID int) {
 	wm.db.SaveJob(job)
 }
 
-// handleFailure updates the job attempt count and either moves the job
-// to the DLQ (DEAD) or schedules a retry with exponential backoff.
+// handleFailure handles job failures - either retry or move to DLQ
 func (wm *WorkerManager) handleFailure(job *Job, result ExecutionResult) {
 	job.Attempts++
 	job.ErrorMessage = result.Error
 	job.ExitCode = &result.ExitCode
 
+	// Check if we've exceeded max retries
 	maxRetriesStr, _ := wm.db.GetConfig("max-retries")
 	maxRetries := 3
 	if val, err := strconv.Atoi(maxRetriesStr); err == nil {
@@ -99,6 +98,7 @@ func (wm *WorkerManager) handleFailure(job *Job, result ExecutionResult) {
 	}
 
 	if job.Attempts >= maxRetries {
+		// Move to DLQ - job has failed too many times
 		job.State = StateDead
 		log.Printf("✗ Job %s → DLQ (failed %d times)\n", job.ID, job.Attempts)
 	} else {
@@ -117,7 +117,7 @@ func (wm *WorkerManager) handleFailure(job *Job, result ExecutionResult) {
 	}
 }
 
-// StopWorkers signals all active workers to stop and waits for them to exit.
+// StopWorkers gracefully stops all workers
 func (wm *WorkerManager) StopWorkers() {
 	log.Println("Stopping workers...")
 	for i := 0; i < wm.activeWorkers; i++ {
@@ -127,7 +127,7 @@ func (wm *WorkerManager) StopWorkers() {
 	log.Println("✓ All workers stopped")
 }
 
-// GetActiveWorkerCount returns the number of worker goroutines currently running.
+// GetActiveWorkerCount returns current worker count
 func (wm *WorkerManager) GetActiveWorkerCount() int {
 	return wm.activeWorkers
 }

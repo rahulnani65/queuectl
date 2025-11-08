@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listCmd prints jobs filtered by state in a compact table format.
+// listCmd lists jobs by state
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List jobs by state",

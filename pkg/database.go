@@ -7,14 +7,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// DB provides a thin wrapper around the SQLite connection and
-// exposes typed helpers for working with jobs and configuration.
+// DB wraps SQLite connection
 type DB struct {
 	conn *sql.DB
 }
 
-// NewDB opens (or creates) a SQLite database at the given path and
-// ensures the required schema and default configuration are present.
+// NewDB creates a new database connection and initializes schema
 func NewDB(path string) (*DB, error) {
 	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -74,7 +72,7 @@ func initSchema(conn *sql.DB) error {
 	return nil
 }
 
-// SaveJob inserts or updates a job record.
+// SaveJob saves a job to the database (insert or update)
 func (db *DB) SaveJob(job *Job) error {
 	_, err := db.conn.Exec(`
 		INSERT OR REPLACE INTO jobs 
@@ -91,7 +89,7 @@ func (db *DB) SaveJob(job *Job) error {
 	return err
 }
 
-// FindJobsByState returns up to 100 jobs that match the provided state.
+// FindJobsByState finds jobs by state (limited to 100)
 func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	rows, err := db.conn.Query(
 		`SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output 
@@ -121,7 +119,7 @@ func (db *DB) FindJobsByState(state JobState) ([]Job, error) {
 	return jobs, nil
 }
 
-// FindJobByID returns a job by its ID, or nil if not found.
+// FindJobByID finds a job by ID
 func (db *DB) FindJobByID(id string) (*Job, error) {
 	job := &Job{}
 	err := db.conn.QueryRow(
@@ -135,12 +133,11 @@ func (db *DB) FindJobByID(id string) (*Job, error) {
 	return job, err
 }
 
-// GetStatusSummary aggregates job counts by state, returning a map with
-// all states initialized to zero so that lookups are safe.
+// GetStatusSummary returns count of jobs by state
 func (db *DB) GetStatusSummary() (map[JobState]int, error) {
 	summary := make(map[JobState]int)
 
-	// Initialize all states with 0 to avoid missing keys
+	// Initialize all states to 0
 	summary[StatePending] = 0
 	summary[StateProcessing] = 0
 	summary[StateCompleted] = 0
@@ -165,8 +162,7 @@ func (db *DB) GetStatusSummary() (map[JobState]int, error) {
 	return summary, nil
 }
 
-// AcquireNextPendingJob atomically selects the oldest runnable PENDING job
-// (respecting scheduled_at) and transitions it to PROCESSING.
+// AcquireNextPendingJob atomically grabs the next pending job and marks it as processing
 func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	tx, err := db.conn.Begin()
 	if err != nil {
@@ -174,6 +170,7 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	}
 	defer tx.Rollback()
 
+	// Get the oldest pending job that's ready to run
 	job := &Job{}
 	err = tx.QueryRow(`
 		SELECT id, command, state, attempts, max_retries, created_at, updated_at, scheduled_at, error_message, exit_code, output
@@ -194,13 +191,13 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 		return nil, err
 	}
 
+	// Mark job as processing
 	_, err = tx.Exec("UPDATE jobs SET state = ? WHERE id = ?", StateProcessing, job.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +205,7 @@ func (db *DB) AcquireNextPendingJob() (*Job, error) {
 	return job, nil
 }
 
-// GetConfig returns the string value for a configuration key.
+// GetConfig gets a config value
 func (db *DB) GetConfig(key string) (string, error) {
 	var value string
 	err := db.conn.QueryRow(
@@ -218,7 +215,7 @@ func (db *DB) GetConfig(key string) (string, error) {
 	return value, err
 }
 
-// SetConfig upserts the string value for a configuration key.
+// SetConfig sets a config value
 func (db *DB) SetConfig(key, value string) error {
 	_, err := db.conn.Exec(
 		"INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
@@ -227,7 +224,7 @@ func (db *DB) SetConfig(key, value string) error {
 	return err
 }
 
-// Close terminates the underlying database connection.
+// Close closes the database connection
 func (db *DB) Close() error {
 	return db.conn.Close()
 }

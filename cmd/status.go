@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// statusCmd displays a summary of queue state and active workers.
+// statusCmd shows queue status
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show queue status",
