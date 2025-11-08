@@ -37,6 +37,44 @@ go build -o queuectl .
 ./queuectl --help
 ```
 
+## 🎬 CLI Demo
+
+Watch a live demonstration of queuectl in action:
+
+**[📹 Watch Demo on Google Drive](https://drive.google.com/file/d/1qZmX9-LQXvGTta2SaSAVh1sqM4JrylS0/view?usp=sharing)**
+
+The demo showcases:
+- Enqueueing jobs
+- Starting workers
+- Monitoring queue status
+- Managing configuration
+- Dead Letter Queue (DLQ) functionality
+
+### Recording Demo
+
+To record a demo:
+
+1. Install `asciinema`:
+   ```bash
+   brew install asciinema  # macOS
+   # or
+   pip install asciinema   # Linux/other
+   ```
+
+2. Run the recording script:
+   ```bash
+   ./record_demo.sh
+   ```
+
+3. Convert to GIF for Google Drive preview:
+   ```bash
+   ./convert_demo.sh queuectl-demo.cast
+   ```
+
+4. Upload the generated `queuectl-demo.gif` file to Google Drive and update the link above.
+
+**Note**: Google Drive cannot preview `.cast` files, so convert to GIF first using the `convert_demo.sh` script.
+
 ## 📖 Usage Examples
 
 ### Enqueue a Job
